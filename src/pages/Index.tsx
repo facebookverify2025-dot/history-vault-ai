@@ -5,6 +5,7 @@ import Quiz from '@/components/Quiz';
 import Leaderboard from '@/components/Leaderboard';
 import AdminPanel from '@/components/AdminPanel';
 import Navigation from '@/components/Navigation';
+import AchievementSystem, { GameStats } from '@/components/AchievementSystem';
 import { Card } from '@/components/ui/card';
 
 export interface User {
@@ -55,6 +56,14 @@ const Index = () => {
     }
   ]);
   const [users, setUsers] = useState<User[]>([]);
+  const [gameStats, setGameStats] = useState<GameStats>({
+    currentScore: 0,
+    streak: 0,
+    questionsAnswered: 0,
+    correctAnswers: 0,
+    averageTime: 0,
+    totalSessions: 0
+  });
 
   // Load saved data from localStorage
   useEffect(() => {
@@ -92,7 +101,7 @@ const Index = () => {
     setCurrentPage('quiz');
   };
 
-  const handleScoreUpdate = (newScore: number) => {
+  const handleScoreUpdate = (newScore: number, stats?: Partial<GameStats>) => {
     if (currentUser) {
       const updatedUser = { ...currentUser, score: newScore };
       setCurrentUser(updatedUser);
@@ -101,6 +110,15 @@ const Index = () => {
         user.id === currentUser.id ? updatedUser : user
       );
       setUsers(updatedUsers);
+      
+      // Update game statistics
+      if (stats) {
+        setGameStats(prev => ({
+          ...prev,
+          currentScore: newScore,
+          ...stats
+        }));
+      }
       
       // Save to localStorage
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
@@ -186,6 +204,26 @@ const Index = () => {
               >
                 🏆 لوحة الشرف
               </button>
+            </motion.div>
+
+            {/* Achievement System */}
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="max-w-4xl mx-auto"
+            >
+              <Card className="card-space p-6">
+                <h3 className="text-xl font-bold text-foreground mb-4 text-center">
+                  🏅 الإنجازات
+                </h3>
+                <AchievementSystem 
+                  stats={gameStats}
+                  onAchievementUnlock={(achievement) => {
+                    console.log('🎉 تم فتح إنجاز جديد:', achievement.title);
+                  }}
+                />
+              </Card>
             </motion.div>
           </div>
         ) : (

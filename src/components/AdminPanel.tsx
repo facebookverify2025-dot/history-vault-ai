@@ -137,7 +137,7 @@ const AdminPanel = ({
       </motion.div>
 
       <Tabs defaultValue="questions" className="space-y-6">
-        <TabsList className="glass border-glass-border p-1 grid grid-cols-4 w-full max-w-2xl mx-auto">
+        <TabsList className="glass border-glass-border p-1 grid grid-cols-5 w-full max-w-3xl mx-auto">
           <TabsTrigger value="questions" className="text-foreground data-[state=active]:bg-primary/20">
             📝 إدارة الأسئلة
           </TabsTrigger>
@@ -149,6 +149,9 @@ const AdminPanel = ({
           </TabsTrigger>
           <TabsTrigger value="ai" className="text-foreground data-[state=active]:bg-primary/20">
             🤖 الذكاء الاصطناعي
+          </TabsTrigger>
+          <TabsTrigger value="developer" className="text-foreground data-[state=active]:bg-primary/20">
+            👨‍💻 خيارات المطور
           </TabsTrigger>
         </TabsList>
 
@@ -402,6 +405,167 @@ const AdminPanel = ({
               <Button className="btn-space w-full" disabled>
                 🎵 رفع ملف صوتي
               </Button>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Developer Options */}
+        <TabsContent value="developer" className="space-y-6">
+          <Card className="card-neon p-8">
+            <div className="text-center mb-8">
+              <div className="text-6xl mb-4 animate-bounce">👨‍💻</div>
+              <h2 className="text-3xl font-bold text-neon mb-2">
+                خيارات المطور
+              </h2>
+              <div className="space-y-2 text-lg">
+                <p className="text-foreground font-semibold">
+                  👤 المطور: <span className="text-gold-neon">محمد صلاح كمال صبحي</span>
+                </p>
+                <p className="text-muted-foreground">
+                  🎂 العمر: <span className="text-neon">17 سنة</span>
+                </p>
+                <p className="text-muted-foreground">
+                  🔐 تخصص: <span className="text-primary">Cybersecurity & CTF</span>
+                </p>
+                <p className="text-muted-foreground">
+                  📧 البريد: <span className="text-neon-accent">mohamadsalahkamal683@gmail.com</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="card-space p-6">
+                <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                  📊 إحصائيات التطبيق
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">إجمالي الأسئلة:</span>
+                    <span className="font-bold text-neon">{questions.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">المستخدمون المسجلون:</span>
+                    <span className="font-bold text-gold-neon">{users.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">أعلى نتيجة:</span>
+                    <span className="font-bold text-primary">
+                      {users.length > 0 ? Math.max(...users.map(u => u.score)) : 0} نقطة
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">متوسط النتائج:</span>
+                    <span className="font-bold text-neon-accent">
+                      {users.length > 0 ? Math.round(users.reduce((sum, u) => sum + u.score, 0) / users.length) : 0} نقطة
+                    </span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="card-space p-6">
+                <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                  🛠️ أدوات المطور
+                </h3>
+                <div className="space-y-3">
+                  <Button 
+                    onClick={() => {
+                      const stats = {
+                        totalQuestions: questions.length,
+                        totalUsers: users.length,
+                        highestScore: users.length > 0 ? Math.max(...users.map(u => u.score)) : 0,
+                        averageScore: users.length > 0 ? Math.round(users.reduce((sum, u) => sum + u.score, 0) / users.length) : 0,
+                        userData: users,
+                        questionData: questions
+                      };
+                      console.log('📊 App Statistics:', stats);
+                      navigator.clipboard.writeText(JSON.stringify(stats, null, 2));
+                      alert('تم نسخ الإحصائيات إلى الحافظة! 📋');
+                    }}
+                    className="btn-space w-full justify-start"
+                  >
+                    📋 نسخ إحصائيات التطبيق
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => {
+                      const backup = {
+                        questions,
+                        users,
+                        timestamp: new Date().toISOString(),
+                        appVersion: '1.0.0'
+                      };
+                      const dataStr = JSON.stringify(backup, null, 2);
+                      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                      const url = URL.createObjectURL(dataBlob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `app_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="btn-neon w-full justify-start"
+                  >
+                    💾 تحميل نسخة احتياطية كاملة
+                  </Button>
+
+                  <Button 
+                    onClick={() => {
+                      localStorage.clear();
+                      alert('تم مسح جميع البيانات المحلية! سيتم إعادة تحميل الصفحة.');
+                      window.location.reload();
+                    }}
+                    className="btn-destructive w-full justify-start"
+                  >
+                    🗑️ إعادة تعيين التطبيق كاملاً
+                  </Button>
+                </div>
+              </Card>
+
+              <Card className="card-space p-6 md:col-span-2">
+                <h3 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                  🌟 مميزات التطبيق الحالية
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">✅</span>
+                      <span className="text-foreground">أسئلة عشوائية بدون تكرار</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">✅</span>
+                      <span className="text-foreground">إدارة الأسئلة يدوياً</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">✅</span>
+                      <span className="text-foreground">استيراد/تصدير JSON</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">✅</span>
+                      <span className="text-foreground">لوحة الشرف التفاعلية</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">✅</span>
+                      <span className="text-foreground">تسجيل المستخدمين</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">✅</span>
+                      <span className="text-foreground">تصميم مستقبلي متجاوب</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">✅</span>
+                      <span className="text-foreground">حفظ البيانات محلياً</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-400">✅</span>
+                      <span className="text-foreground">نظام النقاط والإنجازات</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
             </div>
           </Card>
         </TabsContent>

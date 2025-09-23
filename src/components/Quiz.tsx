@@ -4,58 +4,151 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { User, Question } from '@/pages/Index';
+import { GameStats } from '@/components/AchievementSystem';
 
 interface QuizProps {
   questions: Question[];
   currentUser: User | null;
-  onScoreUpdate: (newScore: number) => void;
+  onScoreUpdate: (newScore: number, stats?: Partial<GameStats>) => void;
   onNavigateHome: () => void;
 }
 
 const Quiz = ({ questions, currentUser, onScoreUpdate, onNavigateHome }: QuizProps) => {
+  const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [score, setScore] = useState(currentUser?.score || 0);
   const [showResult, setShowResult] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [usedQuestions, setUsedQuestions] = useState<Set<string>>(new Set());
+  const [questionStartTime, setQuestionStartTime] = useState<number>(Date.now());
+  const [averageTime, setAverageTime] = useState<number[]>([]);
+  const [questionsAnswered, setQuestionsAnswered] = useState(0);
+  const [correctAnswers, setCorrectAnswers] = useState(0);
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  // Shuffle questions on component mount
+  useEffect(() => {
+    const shuffled = [...questions].sort(() => Math.random() - 0.5);
+    setShuffledQuestions(shuffled);
+    setQuestionStartTime(Date.now());
+  }, [questions]);
 
-  // Sound effects (simulated with console logs for now)
+  // Reset question timer when question changes
+  useEffect(() => {
+    setQuestionStartTime(Date.now());
+  }, [currentQuestionIndex]);
+
+  const currentQuestion = shuffledQuestions[currentQuestionIndex];
+  const progress = shuffledQuestions.length > 0 ? ((currentQuestionIndex + 1) / shuffledQuestions.length) * 100 : 0;
+
+  // Sound effects with better feedback
   const playCorrectSound = () => {
     console.log('🔊 إجابة صحيحة!');
-    // In a real app, you would play an actual audio file
+    // Create audio context for sound visualization
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A note
+      oscillator.frequency.setValueAtTime(554.37, audioContext.currentTime + 0.1); // C# note
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+      console.log('🎵 تأثير صوتي إيجابي');
+    }
   };
 
   const playWrongSound = () => {
     console.log('🔊 إجابة خاطئة!');
-    // In a real app, you would play an actual audio file
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime); // Low note
+      oscillator.frequency.setValueAtTime(150, audioContext.currentTime + 0.2); // Lower note
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (error) {
+      console.log('🎵 تأثير صوتي سلبي');
+    }
   };
 
   const handleAnswerSelect = (answer: string) => {
     if (isAnswered) return;
     
+    // Calculate time taken for this question
+    const timeTaken = Date.now() - questionStartTime;
+    setAverageTime(prev => [...prev, timeTaken]);
+    setQuestionsAnswered(prev => prev + 1);
+    
     setSelectedAnswer(answer);
     setIsAnswered(true);
+
+    // Mark question as used
+    setUsedQuestions(prev => new Set(prev).add(currentQuestion.id));
 
     const isCorrect = answer === currentQuestion.correctAnswer;
     
     if (isCorrect) {
       playCorrectSound();
-      const newScore = score + 10;
+      setCorrectAnswers(prev => prev + 1);
+      
+      // Bonus points for quick answers (under 10 seconds)
+      const bonusPoints = timeTaken < 10000 ? 15 : 10;
+      const newScore = score + bonusPoints;
       setScore(newScore);
       setStreak(streak + 1);
-      onScoreUpdate(newScore);
+      
+      const currentAverage = averageTime.length > 0 
+        ? averageTime.reduce((a, b) => a + b, 0) / averageTime.length 
+        : timeTaken;
+        
+      onScoreUpdate(newScore, {
+        streak: streak + 1,
+        questionsAnswered: questionsAnswered + 1,
+        correctAnswers: correctAnswers + 1,
+        averageTime: currentAverage,
+        currentScore: newScore
+      });
+      
+      if (timeTaken < 5000) {
+        console.log('⚡ إجابة سريعة! +5 نقاط إضافية');
+      }
     } else {
       playWrongSound();
       setStreak(0);
+      
+      const currentAverage = averageTime.length > 0 
+        ? averageTime.reduce((a, b) => a + b, 0) / averageTime.length 
+        : timeTaken;
+        
+      onScoreUpdate(score, {
+        streak: 0,
+        questionsAnswered: questionsAnswered + 1,
+        correctAnswers,
+        averageTime: currentAverage,
+        currentScore: score
+      });
     }
 
     // Auto advance after 2 seconds
     setTimeout(() => {
-      if (currentQuestionIndex < questions.length - 1) {
+      if (currentQuestionIndex < shuffledQuestions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         setSelectedAnswer(null);
         setIsAnswered(false);
@@ -66,11 +159,17 @@ const Quiz = ({ questions, currentUser, onScoreUpdate, onNavigateHome }: QuizPro
   };
 
   const resetQuiz = () => {
+    // Reshuffle questions for a new quiz experience
+    const shuffled = [...questions].sort(() => Math.random() - 0.5);
+    setShuffledQuestions(shuffled);
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setIsAnswered(false);
     setShowResult(false);
     setStreak(0);
+    setUsedQuestions(new Set());
+    setAverageTime([]);
+    setQuestionStartTime(Date.now());
   };
 
   if (showResult) {
@@ -103,18 +202,23 @@ const Quiz = ({ questions, currentUser, onScoreUpdate, onNavigateHome }: QuizPro
                 النتيجة النهائية: <span className="text-gold-neon font-bold">{score}</span>
               </p>
               <p className="text-muted-foreground">
-                من أصل {questions.length * 10} نقطة
+                من أصل {shuffledQuestions.length * 10} نقطة
               </p>
+              {averageTime.length > 0 && (
+                <p className="text-neon-accent text-sm">
+                  متوسط الوقت: {Math.round(averageTime.reduce((a, b) => a + b, 0) / averageTime.length / 1000)} ثانية
+                </p>
+              )}
               <div className="my-6">
                 <div className="text-4xl mb-2">
-                  {score >= questions.length * 8 ? '🥇' : 
-                   score >= questions.length * 6 ? '🥈' : 
-                   score >= questions.length * 4 ? '🥉' : '📚'}
+                  {score >= shuffledQuestions.length * 8 ? '🥇' : 
+                   score >= shuffledQuestions.length * 6 ? '🥈' : 
+                   score >= shuffledQuestions.length * 4 ? '🥉' : '📚'}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {score >= questions.length * 8 ? 'أداء ممتاز!' : 
-                   score >= questions.length * 6 ? 'أداء جيد جداً!' : 
-                   score >= questions.length * 4 ? 'أداء جيد!' : 'يمكنك التحسن!'}
+                  {score >= shuffledQuestions.length * 8 ? 'أداء ممتاز!' : 
+                   score >= shuffledQuestions.length * 6 ? 'أداء جيد جداً!' : 
+                   score >= shuffledQuestions.length * 4 ? 'أداء جيد!' : 'يمكنك التحسن!'}
                 </p>
               </div>
             </div>
@@ -186,7 +290,7 @@ const Quiz = ({ questions, currentUser, onScoreUpdate, onNavigateHome }: QuizPro
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="flex justify-between text-sm text-muted-foreground mb-2">
-          <span>السؤال {currentQuestionIndex + 1} من {questions.length}</span>
+          <span>السؤال {currentQuestionIndex + 1} من {shuffledQuestions.length}</span>
           <span>%{Math.round(progress)}</span>
         </div>
         <Progress value={progress} className="h-3 glass rounded-full" />
