@@ -14,11 +14,36 @@ export default {
     },
     extend: {
       colors: {
+        // Base system colors
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        
+        // Space theme colors
+        space: {
+          deep: "hsl(var(--space-deep))",
+          dark: "hsl(var(--space-dark))",
+          medium: "hsl(var(--space-medium))",
+        },
+        nebula: {
+          purple: "hsl(var(--nebula-purple))",
+          blue: "hsl(var(--nebula-blue))",
+          cyan: "hsl(var(--nebula-cyan))",
+        },
+        neon: {
+          primary: "hsl(var(--neon-primary))",
+          secondary: "hsl(var(--neon-secondary))",
+          accent: "hsl(var(--neon-accent))",
+        },
+        glass: {
+          bg: "hsl(var(--glass-bg))",
+          border: "hsl(var(--glass-border))",
+          highlight: "hsl(var(--glass-highlight))",
+        },
+        
+        // Semantic colors
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -30,6 +55,10 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -46,16 +75,6 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
-        },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
         },
       },
       borderRadius: {
