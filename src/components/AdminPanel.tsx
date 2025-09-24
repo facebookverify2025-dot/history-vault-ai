@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ interface AdminPanelProps {
   questions: Question[];
   onAddQuestion: (question: Omit<Question, 'id' | 'createdAt'>) => void;
   onDeleteQuestion: (questionId: string) => void;
+  onEditQuestion: (questionId: string, updates: Partial<Question>) => void;
   onImportQuestions: (questions: Question[]) => void;
   users: User[];
   onResetLeaderboard: () => void;
@@ -22,6 +23,7 @@ const AdminPanel = ({
   questions, 
   onAddQuestion, 
   onDeleteQuestion, 
+  onEditQuestion,
   onImportQuestions,
   users,
   onResetLeaderboard 
@@ -32,6 +34,12 @@ const AdminPanel = ({
     correctAnswer: ''
   });
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [correctSounds, setCorrectSounds] = useState<File[]>([]);
+  const [wrongSounds, setWrongSounds] = useState<File[]>([]);
+  const [uploadedCorrectSounds, setUploadedCorrectSounds] = useState<string[]>([]);
+  const [uploadedWrongSounds, setUploadedWrongSounds] = useState<string[]>([]);
 
   const handleAddChoice = () => {
     if (newQuestion.choices.length < 6) {
@@ -120,6 +128,61 @@ const AdminPanel = ({
     }
   };
 
+  const handleEditQuestion = () => {
+    if (editingQuestion && editingQuestion.text && editingQuestion.choices.every(choice => choice.trim()) && editingQuestion.correctAnswer) {
+      onEditQuestion(editingQuestion.id, {
+        text: editingQuestion.text,
+        choices: editingQuestion.choices.filter(choice => choice.trim()),
+        correctAnswer: editingQuestion.correctAnswer
+      });
+      setEditingQuestion(null);
+      setShowEditDialog(false);
+    }
+  };
+
+  const handleUpdateEditChoice = (index: number, value: string) => {
+    if (editingQuestion) {
+      const updatedChoices = [...editingQuestion.choices];
+      updatedChoices[index] = value;
+      setEditingQuestion({
+        ...editingQuestion,
+        choices: updatedChoices
+      });
+    }
+  };
+
+  const handleAddEditChoice = () => {
+    if (editingQuestion && editingQuestion.choices.length < 6) {
+      setEditingQuestion({
+        ...editingQuestion,
+        choices: [...editingQuestion.choices, '']
+      });
+    }
+  };
+
+  const handleRemoveEditChoice = (index: number) => {
+    if (editingQuestion && editingQuestion.choices.length > 2) {
+      const updatedChoices = editingQuestion.choices.filter((_, i) => i !== index);
+      setEditingQuestion({
+        ...editingQuestion,
+        choices: updatedChoices,
+        correctAnswer: editingQuestion.correctAnswer === editingQuestion.choices[index] ? '' : editingQuestion.correctAnswer
+      });
+    }
+  };
+
+  // Load sounds from localStorage on component mount
+  useEffect(() => {
+    const savedCorrect = localStorage.getItem('correctSounds');
+    const savedWrong = localStorage.getItem('wrongSounds');
+    if (savedCorrect) {
+      setUploadedCorrectSounds(JSON.parse(savedCorrect));
+    }
+    if (savedWrong) {
+      setUploadedWrongSounds(JSON.parse(savedWrong));
+    }
+  }, []);
+
   return (
     <div className="max-w-6xl mx-auto">
       <motion.div
@@ -137,7 +200,7 @@ const AdminPanel = ({
       </motion.div>
 
       <Tabs defaultValue="questions" className="space-y-6">
-        <TabsList className="glass border-glass-border p-1 grid grid-cols-5 w-full max-w-3xl mx-auto">
+        <TabsList className="glass border-glass-border p-1 grid grid-cols-4 w-full max-w-2xl mx-auto">
           <TabsTrigger value="questions" className="text-foreground data-[state=active]:bg-primary/20">
             📝 إدارة الأسئلة
           </TabsTrigger>
@@ -146,9 +209,6 @@ const AdminPanel = ({
           </TabsTrigger>
           <TabsTrigger value="leaderboard" className="text-foreground data-[state=active]:bg-primary/20">
             🏆 لوحة الشرف
-          </TabsTrigger>
-          <TabsTrigger value="ai" className="text-foreground data-[state=active]:bg-primary/20">
-            🤖 الذكاء الاصطناعي
           </TabsTrigger>
           <TabsTrigger value="developer" className="text-foreground data-[state=active]:bg-primary/20">
             👨‍💻 خيارات المطور
@@ -268,6 +328,87 @@ const AdminPanel = ({
             </div>
           </div>
 
+          {/* Edit Question Dialog */}
+          <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+            <DialogContent className="glass border-glass-border max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-neon">تعديل السؤال</DialogTitle>
+              </DialogHeader>
+              
+              {editingQuestion && (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="editQuestionText">نص السؤال</Label>
+                    <Input
+                      id="editQuestionText"
+                      value={editingQuestion.text}
+                      onChange={(e) => setEditingQuestion({...editingQuestion, text: e.target.value})}
+                      className="input-space mt-2"
+                      placeholder="اكتب السؤال هنا..."
+                    />
+                  </div>
+
+                  <div>
+                    <Label>الخيارات</Label>
+                    {editingQuestion.choices.map((choice, index) => (
+                      <div key={index} className="flex gap-2 mt-2">
+                        <Input
+                          value={choice}
+                          onChange={(e) => handleUpdateEditChoice(index, e.target.value)}
+                          className="input-space"
+                          placeholder={`الخيار ${index + 1}`}
+                        />
+                        {editingQuestion.choices.length > 2 && (
+                          <Button
+                            type="button"
+                            onClick={() => handleRemoveEditChoice(index)}
+                            className="btn-destructive px-3"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {editingQuestion.choices.length < 6 && (
+                      <Button
+                        type="button"
+                        onClick={handleAddEditChoice}
+                        className="btn-space mt-2"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        إضافة خيار
+                      </Button>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="editCorrectAnswer">الإجابة الصحيحة</Label>
+                    <select
+                      id="editCorrectAnswer"
+                      value={editingQuestion.correctAnswer}
+                      onChange={(e) => setEditingQuestion({...editingQuestion, correctAnswer: e.target.value})}
+                      className="input-space mt-2 w-full"
+                    >
+                      <option value="">اختر الإجابة الصحيحة</option>
+                      {editingQuestion.choices.filter(choice => choice.trim()).map((choice, index) => (
+                        <option key={index} value={choice}>{choice}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <Button
+                    onClick={handleEditQuestion}
+                    className="btn-success w-full"
+                    disabled={!editingQuestion.text || !editingQuestion.correctAnswer || editingQuestion.choices.some(c => !c.trim())}
+                  >
+                    ✅ حفظ التعديلات
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
           <div className="grid gap-4">
             {questions.map((question) => (
               <motion.div
@@ -301,12 +442,23 @@ const AdminPanel = ({
                         <span>تاريخ الإضافة: {new Date(question.createdAt).toLocaleDateString('ar')}</span>
                       </div>
                     </div>
-                    <Button
-                      onClick={() => onDeleteQuestion(question.id)}
-                      className="btn-destructive mr-4"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          setEditingQuestion(question);
+                          setShowEditDialog(true);
+                        }}
+                        className="btn-space"
+                      >
+                        ✏️ تعديل
+                      </Button>
+                      <Button
+                        onClick={() => onDeleteQuestion(question.id)}
+                        className="btn-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               </motion.div>
@@ -316,23 +468,125 @@ const AdminPanel = ({
 
         {/* Sounds Management */}
         <TabsContent value="sounds" className="space-y-6">
-          <Card className="card-space p-8 text-center">
-            <div className="text-6xl mb-4">🔊</div>
-            <h2 className="text-2xl font-bold text-foreground mb-4">
-              إدارة الأصوات
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              قريباً: إضافة وإدارة الأصوات للإجابات الصحيحة والخاطئة
-            </p>
-            <div className="space-y-4 max-w-md mx-auto">
-              <Button className="btn-space w-full" disabled>
-                🎵 رفع أصوات الإجابات الصحيحة
-              </Button>
-              <Button className="btn-space w-full" disabled>
-                🎵 رفع أصوات الإجابات الخاطئة
-              </Button>
-            </div>
-          </Card>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="card-space p-6">
+              <h3 className="text-xl font-bold text-neon mb-4 text-center">
+                🎵 أصوات الإجابات الصحيحة
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setCorrectSounds(prev => [...prev, ...files]);
+                      files.forEach(file => {
+                        const url = URL.createObjectURL(file);
+                        setUploadedCorrectSounds(prev => [...prev, url]);
+                        localStorage.setItem('correctSounds', JSON.stringify([...uploadedCorrectSounds, url]));
+                      });
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    id="correct-sounds"
+                  />
+                  <Button asChild className="btn-success w-full">
+                    <label htmlFor="correct-sounds" className="cursor-pointer">
+                      📤 رفع أصوات صحيحة
+                    </label>
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {uploadedCorrectSounds.map((sound, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-success/10 rounded border border-success/30">
+                      <span className="text-sm text-success flex-1">صوت صحيح {index + 1}</span>
+                      <Button
+                        onClick={() => {
+                          const audio = new Audio(sound);
+                          audio.play();
+                        }}
+                        className="btn-space px-2 py-1 text-xs"
+                      >
+                        ▶️
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const updated = uploadedCorrectSounds.filter((_, i) => i !== index);
+                          setUploadedCorrectSounds(updated);
+                          localStorage.setItem('correctSounds', JSON.stringify(updated));
+                        }}
+                        className="btn-destructive px-2 py-1 text-xs"
+                      >
+                        🗑️
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            <Card className="card-space p-6">
+              <h3 className="text-xl font-bold text-destructive mb-4 text-center">
+                🎵 أصوات الإجابات الخاطئة
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setWrongSounds(prev => [...prev, ...files]);
+                      files.forEach(file => {
+                        const url = URL.createObjectURL(file);
+                        setUploadedWrongSounds(prev => [...prev, url]);
+                        localStorage.setItem('wrongSounds', JSON.stringify([...uploadedWrongSounds, url]));
+                      });
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    id="wrong-sounds"
+                  />
+                  <Button asChild className="btn-destructive w-full">
+                    <label htmlFor="wrong-sounds" className="cursor-pointer">
+                      📤 رفع أصوات خاطئة
+                    </label>
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  {uploadedWrongSounds.map((sound, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-destructive/10 rounded border border-destructive/30">
+                      <span className="text-sm text-destructive flex-1">صوت خاطئ {index + 1}</span>
+                      <Button
+                        onClick={() => {
+                          const audio = new Audio(sound);
+                          audio.play();
+                        }}
+                        className="btn-space px-2 py-1 text-xs"
+                      >
+                        ▶️
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const updated = uploadedWrongSounds.filter((_, i) => i !== index);
+                          setUploadedWrongSounds(updated);
+                          localStorage.setItem('wrongSounds', JSON.stringify(updated));
+                        }}
+                        className="btn-destructive px-2 py-1 text-xs"
+                      >
+                        🗑️
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Leaderboard Management */}
@@ -385,29 +639,6 @@ const AdminPanel = ({
           </div>
         </TabsContent>
 
-        {/* AI Management */}
-        <TabsContent value="ai" className="space-y-6">
-          <Card className="card-space p-8 text-center">
-            <div className="text-6xl mb-4">🤖</div>
-            <h2 className="text-2xl font-bold text-foreground mb-4">
-              الذكاء الاصطناعي
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              قريباً: رفع ملفات PDF/DOCX/MP3 لتوليد أسئلة تلقائياً باستخدام الذكاء الاصطناعي
-            </p>
-            <div className="space-y-4 max-w-md mx-auto">
-              <Button className="btn-space w-full" disabled>
-                📄 رفع ملف PDF
-              </Button>
-              <Button className="btn-space w-full" disabled>
-                📝 رفع ملف Word
-              </Button>
-              <Button className="btn-space w-full" disabled>
-                🎵 رفع ملف صوتي
-              </Button>
-            </div>
-          </Card>
-        </TabsContent>
 
         {/* Developer Options */}
         <TabsContent value="developer" className="space-y-6">

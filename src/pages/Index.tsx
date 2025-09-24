@@ -144,6 +144,14 @@ const Index = () => {
     localStorage.setItem('questions', JSON.stringify(updatedQuestions));
   };
 
+  const handleEditQuestion = (questionId: string, updates: Partial<Question>) => {
+    const updatedQuestions = questions.map(q => 
+      q.id === questionId ? { ...q, ...updates } : q
+    );
+    setQuestions(updatedQuestions);
+    localStorage.setItem('questions', JSON.stringify(updatedQuestions));
+  };
+
   const handleImportQuestions = (importedQuestions: Question[]) => {
     const updatedQuestions = [...questions, ...importedQuestions];
     setQuestions(updatedQuestions);
@@ -169,6 +177,7 @@ const Index = () => {
             questions={questions}
             onAddQuestion={handleAddQuestion}
             onDeleteQuestion={handleDeleteQuestion}
+            onEditQuestion={handleEditQuestion}
             onImportQuestions={handleImportQuestions}
             users={users}
             onResetLeaderboard={() => {
