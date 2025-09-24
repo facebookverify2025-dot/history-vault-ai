@@ -15,12 +15,7 @@ const Navigation = ({ currentPage, onPageChange, showAdminButton = false }: Navi
   ] as const;
 
   const handleAdminAccess = () => {
-    const password = prompt('أدخل كلمة مرور الأدمن:');
-    if (password === 'omega') {
-      onPageChange('admin');
-    } else if (password) {
-      alert('كلمة المرور غير صحيحة! 🚫');
-    }
+    onPageChange('admin');
   };
 
   return (
