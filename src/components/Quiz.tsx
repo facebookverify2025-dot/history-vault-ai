@@ -26,10 +26,21 @@ const Quiz = ({ questions, currentUser, onScoreUpdate, onNavigateHome }: QuizPro
   const [averageTime, setAverageTime] = useState<number[]>([]);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
+  
+  // Shuffle choices for each question to randomize answer positions
+  const shuffleChoices = (question: Question) => {
+    const shuffledChoices = [...question.choices].sort(() => Math.random() - 0.5);
+    return {
+      ...question,
+      choices: shuffledChoices
+    };
+  };
 
-  // Shuffle questions on component mount
+  // Shuffle questions and their choices on component mount
   useEffect(() => {
-    const shuffled = [...questions].sort(() => Math.random() - 0.5);
+    const shuffled = [...questions]
+      .sort(() => Math.random() - 0.5)
+      .map(question => shuffleChoices(question));
     setShuffledQuestions(shuffled);
     setQuestionStartTime(Date.now());
   }, [questions]);
@@ -159,8 +170,10 @@ const Quiz = ({ questions, currentUser, onScoreUpdate, onNavigateHome }: QuizPro
   };
 
   const resetQuiz = () => {
-    // Reshuffle questions for a new quiz experience
-    const shuffled = [...questions].sort(() => Math.random() - 0.5);
+    // Reshuffle questions and choices for a new quiz experience
+    const shuffled = [...questions]
+      .sort(() => Math.random() - 0.5)
+      .map(question => shuffleChoices(question));
     setShuffledQuestions(shuffled);
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);

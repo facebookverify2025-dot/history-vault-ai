@@ -40,6 +40,8 @@ const AdminPanel = ({
   const [wrongSounds, setWrongSounds] = useState<File[]>([]);
   const [uploadedCorrectSounds, setUploadedCorrectSounds] = useState<string[]>([]);
   const [uploadedWrongSounds, setUploadedWrongSounds] = useState<string[]>([]);
+  const [soundsPassword, setSoundsPassword] = useState('');
+  const [isSoundsAuthenticated, setIsSoundsAuthenticated] = useState(false);
 
   const handleAddChoice = () => {
     if (newQuestion.choices.length < 6) {
@@ -182,6 +184,16 @@ const AdminPanel = ({
       setUploadedWrongSounds(JSON.parse(savedWrong));
     }
   }, []);
+
+  const handleSoundsPasswordSubmit = () => {
+    if (soundsPassword === 'omega') {
+      setIsSoundsAuthenticated(true);
+      setSoundsPassword('');
+    } else {
+      alert('كلمة مرور خاطئة! 🚫');
+      setSoundsPassword('');
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -468,125 +480,153 @@ const AdminPanel = ({
 
         {/* Sounds Management */}
         <TabsContent value="sounds" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="card-space p-6">
-              <h3 className="text-xl font-bold text-neon mb-4 text-center">
-                🎵 أصوات الإجابات الصحيحة
-              </h3>
-              
+          {!isSoundsAuthenticated ? (
+            <Card className="card-space p-8 text-center max-w-md mx-auto">
+              <div className="text-6xl mb-4">🔒</div>
+              <h2 className="text-2xl font-bold text-foreground mb-4">
+                تسجيل الدخول
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                أدخل كلمة المرور للوصول إلى إدارة الأصوات
+              </p>
               <div className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    multiple
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      setCorrectSounds(prev => [...prev, ...files]);
-                      files.forEach(file => {
-                        const url = URL.createObjectURL(file);
-                        setUploadedCorrectSounds(prev => [...prev, url]);
-                        localStorage.setItem('correctSounds', JSON.stringify([...uploadedCorrectSounds, url]));
-                      });
-                    }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    id="correct-sounds"
-                  />
-                  <Button asChild className="btn-success w-full">
-                    <label htmlFor="correct-sounds" className="cursor-pointer">
-                      📤 رفع أصوات صحيحة
-                    </label>
-                  </Button>
-                </div>
-                
-                <div className="space-y-2">
-                  {uploadedCorrectSounds.map((sound, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-success/10 rounded border border-success/30">
-                      <span className="text-sm text-success flex-1">صوت صحيح {index + 1}</span>
-                      <Button
-                        onClick={() => {
-                          const audio = new Audio(sound);
-                          audio.play();
-                        }}
-                        className="btn-space px-2 py-1 text-xs"
-                      >
-                        ▶️
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          const updated = uploadedCorrectSounds.filter((_, i) => i !== index);
-                          setUploadedCorrectSounds(updated);
-                          localStorage.setItem('correctSounds', JSON.stringify(updated));
-                        }}
-                        className="btn-destructive px-2 py-1 text-xs"
-                      >
-                        🗑️
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+                <Input
+                  type="password"
+                  value={soundsPassword}
+                  onChange={(e) => setSoundsPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSoundsPasswordSubmit()}
+                  className="input-space"
+                  placeholder="كلمة المرور"
+                />
+                <Button 
+                  onClick={handleSoundsPasswordSubmit}
+                  className="btn-neon w-full"
+                >
+                  🔓 دخول
+                </Button>
               </div>
             </Card>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="card-space p-6">
+                <h3 className="text-xl font-bold text-neon mb-4 text-center">
+                  🎵 أصوات الإجابات الصحيحة
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setCorrectSounds(prev => [...prev, ...files]);
+                        files.forEach(file => {
+                          const url = URL.createObjectURL(file);
+                          setUploadedCorrectSounds(prev => [...prev, url]);
+                          localStorage.setItem('correctSounds', JSON.stringify([...uploadedCorrectSounds, url]));
+                        });
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      id="correct-sounds"
+                    />
+                    <Button asChild className="btn-success w-full">
+                      <label htmlFor="correct-sounds" className="cursor-pointer">
+                        📤 رفع أصوات صحيحة
+                      </label>
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {uploadedCorrectSounds.map((sound, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-success/10 rounded border border-success/30">
+                        <span className="text-sm text-success flex-1">صوت صحيح {index + 1}</span>
+                        <Button
+                          onClick={() => {
+                            const audio = new Audio(sound);
+                            audio.play();
+                          }}
+                          className="btn-space px-2 py-1 text-xs"
+                        >
+                          ▶️
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            const updated = uploadedCorrectSounds.filter((_, i) => i !== index);
+                            setUploadedCorrectSounds(updated);
+                            localStorage.setItem('correctSounds', JSON.stringify(updated));
+                          }}
+                          className="btn-destructive px-2 py-1 text-xs"
+                        >
+                          🗑️
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
 
-            <Card className="card-space p-6">
-              <h3 className="text-xl font-bold text-destructive mb-4 text-center">
-                🎵 أصوات الإجابات الخاطئة
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    multiple
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files || []);
-                      setWrongSounds(prev => [...prev, ...files]);
-                      files.forEach(file => {
-                        const url = URL.createObjectURL(file);
-                        setUploadedWrongSounds(prev => [...prev, url]);
-                        localStorage.setItem('wrongSounds', JSON.stringify([...uploadedWrongSounds, url]));
-                      });
-                    }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    id="wrong-sounds"
-                  />
-                  <Button asChild className="btn-destructive w-full">
-                    <label htmlFor="wrong-sounds" className="cursor-pointer">
-                      📤 رفع أصوات خاطئة
-                    </label>
-                  </Button>
-                </div>
+              <Card className="card-space p-6">
+                <h3 className="text-xl font-bold text-destructive mb-4 text-center">
+                  🎵 أصوات الإجابات الخاطئة
+                </h3>
                 
-                <div className="space-y-2">
-                  {uploadedWrongSounds.map((sound, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-destructive/10 rounded border border-destructive/30">
-                      <span className="text-sm text-destructive flex-1">صوت خاطئ {index + 1}</span>
-                      <Button
-                        onClick={() => {
-                          const audio = new Audio(sound);
-                          audio.play();
-                        }}
-                        className="btn-space px-2 py-1 text-xs"
-                      >
-                        ▶️
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          const updated = uploadedWrongSounds.filter((_, i) => i !== index);
-                          setUploadedWrongSounds(updated);
-                          localStorage.setItem('wrongSounds', JSON.stringify(updated));
-                        }}
-                        className="btn-destructive px-2 py-1 text-xs"
-                      >
-                        🗑️
-                      </Button>
-                    </div>
-                  ))}
+                <div className="space-y-4">
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setWrongSounds(prev => [...prev, ...files]);
+                        files.forEach(file => {
+                          const url = URL.createObjectURL(file);
+                          setUploadedWrongSounds(prev => [...prev, url]);
+                          localStorage.setItem('wrongSounds', JSON.stringify([...uploadedWrongSounds, url]));
+                        });
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      id="wrong-sounds"
+                    />
+                    <Button asChild className="btn-destructive w-full">
+                      <label htmlFor="wrong-sounds" className="cursor-pointer">
+                        📤 رفع أصوات خاطئة
+                      </label>
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {uploadedWrongSounds.map((sound, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-destructive/10 rounded border border-destructive/30">
+                        <span className="text-sm text-destructive flex-1">صوت خاطئ {index + 1}</span>
+                        <Button
+                          onClick={() => {
+                            const audio = new Audio(sound);
+                            audio.play();
+                          }}
+                          className="btn-space px-2 py-1 text-xs"
+                        >
+                          ▶️
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            const updated = uploadedWrongSounds.filter((_, i) => i !== index);
+                            setUploadedWrongSounds(updated);
+                            localStorage.setItem('wrongSounds', JSON.stringify(updated));
+                          }}
+                          className="btn-destructive px-2 py-1 text-xs"
+                        >
+                          🗑️
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </Card>
-          </div>
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         {/* Leaderboard Management */}
